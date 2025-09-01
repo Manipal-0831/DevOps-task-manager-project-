@@ -21,7 +21,7 @@ pipeline {
       steps {
         echo "Running Terraform to provision infra..."
         sh '''
-          cd terraform
+          cd infra/terraform
           terraform init
           terraform apply -auto-approve
         '''
