@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load-generator
+spec:
+  restartPolicy: Never
+  containers:
+  - name: curl
+    image: curlimages/curl:8.5.0
+    command: ["/bin/sh", "-c"]
+    args:
+      - >
+        while true; do
+          curl -w "\nHTTP STATUS: %{http_code}\n" http://backend-service:8000/health;
+        done

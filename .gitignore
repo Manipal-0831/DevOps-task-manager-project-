@@ -1,0 +1,125 @@
+# === Node.js / Frontend ===
+node_modules/
+dist/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# === Python / Backend ===
+_pycache_/
+*.pyc
+*.pyo
+*.pyd
+*.db
+.venv/
+env/
+venv/
+*.sqlite3
+
+# === Docker ===
+*.pid
+*.log
+.dockerignore
+
+# === Kubernetes / Argo ===
+# (manifests are needed, but not local k8s cache)
+.kube/
+*.crt
+*.key
+
+# === Jenkins ===
+# Don't push Jenkins home or secrets
+/jenkins_home/
+/secrets/
+
+# === Terraform (if used) ===
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# === VSCode/IDE ===
+.vscode/
+.idea/
+*.swp
+
+# === Build artifacts ===
+*.out
+*.class
+*.jar
+*.war
+*.zip
+*.tar.gz
+*.tgz
+
+# === Misc ===
+*.tmp
+*.bak
+*.orig
+
+# Node / Frontend
+node_modules/
+dist/
+.env
+.env.*.local
+npm-debug.log*
+
+# Python / Backend
+_pycache_/
+*.pyc
+.venv/
+venv/
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Docker / CI
+docker-compose.override.yml
+.dockerignore
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs + temp
+*.log
+*.tmp
+*.bak
+
+# Jenkins data (local)
+/jenkins_home/
+
+#logs
+*.log
+
+#secrects
+.env
+
+#os/editor files
+.Ds_Store
+Thumbs.db
+.vscode/
+.idea/
+
+#build artifacts
+dist/
+build/
+

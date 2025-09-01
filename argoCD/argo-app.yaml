@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: taskmgr-app
+  namespace: argocd
+spec:
+  project: taskmgr
+  source:
+    repoURL: https://github.com/Manipal-0831/DevOps-task-manager-project-.git
+    path: 'k8s'
+    targetRevision: HEAD
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

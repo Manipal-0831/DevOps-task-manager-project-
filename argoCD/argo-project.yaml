@@ -1,0 +1,12 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: taskmgr
+  namespace: argocd
+spec:
+  description: Project for taskmgr app
+  sourceRepos:
+    -  https://github.com/Manipal-0831/DevOps-task-manager-project-.git
+  destinations:
+    - namespace: default
+      server: 'https://kubernetes.default.svc'

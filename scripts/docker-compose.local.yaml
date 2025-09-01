@@ -1,0 +1,26 @@
+version: "3.8"
+services:
+  localstack:
+    image: localstack/localstack:3.6
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - AWS_DEFAULT_REGION=us-east-1
+    ports: ["4566:4566"]
+  backend:
+    build: ../backend
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - S3_BUCKET=task-manager-bucket
+      - LOCALSTACK_URL=http://localstack:4566
+    depends_on: [localstack]
+    ports: ["8000:8000"]
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_URL: "http://localhost:8000"
+    depends_on: [backend]
+    ports: ["5173:80"]
