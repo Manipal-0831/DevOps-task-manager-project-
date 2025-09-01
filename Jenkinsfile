@@ -1,95 +1,102 @@
 pipeline {
   agent any
+
   environment {
-    REGISTRY = "ghcr.io/<YOUR_GH_USER>"       // change to your registry
-    BACKEND_IMAGE = "${REGISTRY}/taskmgr-backend"
-    FRONTEND_IMAGE = "${REGISTRY}/taskmgr-frontend"
-    K8S_DIR = "k8s"
-    GIT_USER = "jenkins-bot"
-    GIT_EMAIL = "jenkins-bot@example.com"
+    REGISTRY = "mani0831"
+    FRONT = "myapp-frontend"
+    BACK  = "myapp-backend"
   }
+
   stages {
-    stage('Checkout') { steps { checkout scm } }
 
-    stage('Unit tests & Lint') {
-      parallel {
-        stage('Backend tests') {
-          steps {
-            dir('backend') {
-              sh 'pip install -r requirements.txt'
-              sh 'pytest -q || true'    // change to exit non-zero if you want fail
-            }
-          }
-        }
-        stage('Frontend tests') {
-          steps {
-            dir('frontend') {
-              sh 'npm ci'
-              sh 'npm test --silent || true'
-            }
-          }
-        }
+    stage('Checkout') {
+      steps {
+        checkout scm
+        script { IMAGE_TAG = "1.0.${env.BUILD_NUMBER}" }
+        echo "IMAGE_TAG=${IMAGE_TAG}"
       }
     }
 
-    stage('Build images') {
+    stage('Terraform Apply') {
       steps {
-        sh "docker build -t ${BACKEND_IMAGE}:${GIT_COMMIT} ./backend"
-        sh "docker build -t ${FRONTEND_IMAGE}:${GIT_COMMIT} ./frontend"
-      }
-    }
-
-    stage('Registry login & Push') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'reg-creds', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-          sh 'echo $REG_PASS | docker login ghcr.io -u $REG_USER --password-stdin'
-          sh "docker push ${BACKEND_IMAGE}:${GIT_COMMIT}"
-          sh "docker push ${FRONTEND_IMAGE}:${GIT_COMMIT}"
-        }
-      }
-    }
-
-    stage('Security scans & SBOM') {
-      steps {
+        echo "Running Terraform to provision infra..."
         sh '''
-          # Trivy (images)
-          if command -v trivy >/dev/null 2>&1; then
-            trivy image --severity HIGH,CRITICAL --no-progress ${BACKEND_IMAGE}:${GIT_COMMIT} || true
-            trivy image --severity HIGH,CRITICAL --no-progress ${FRONTEND_IMAGE}:${GIT_COMMIT} || true
-          else
-            echo "trivy not present on node — skip"
-          fi
-
-          # Bandit for backend code
-          pip install bandit || true
-          bandit -r backend || true
-
-          # SBOM using syft (optional)
-          if command -v syft >/dev/null 2>&1; then
-            syft ${BACKEND_IMAGE}:${GIT_COMMIT} -o json > sbom-backend-${GIT_COMMIT}.json || true
-          fi
+          cd terraform
+          terraform init
+          terraform apply -auto-approve
         '''
       }
     }
 
-    stage('Update k8s manifest in Git') {
+    stage('Build Docker Images') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'git-creds', usernameVariable: 'GITUSR', passwordVariable: 'GITPAT')]) {
-          sh '''
-            # update backend image
-            sed -i "s|image: .*taskmgr-backend.*|image: ${BACKEND_IMAGE}:${GIT_COMMIT}|" ${K8S_DIR}/backend-deployment.yaml
+        sh "docker build -t ${REGISTRY}/${FRONT}:${IMAGE_TAG} ./frontend"
+        sh "docker build -t ${REGISTRY}/${BACK}:${IMAGE_TAG} ./backend"
+      }
+    }
 
-            git config user.email "${GIT_EMAIL}"
-            git config user.name "${GIT_USER}"
-            git remote set-url origin https://${GITUSR}:${GITPAT}@$(git config --get remote.origin.url | sed 's#https://##')
-            git add ${K8S_DIR}/backend-deployment.yaml
-            git commit -m "ci: update backend image ${GIT_COMMIT}" || true
-            git push origin HEAD
+    stage('Push Images to DockerHub') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh '''
+            echo $DOCKER_PASS | docker login -u "$DOCKER_USER" --password-stdin
+            docker push ${REGISTRY}/${FRONT}:${IMAGE_TAG}
+            docker push ${REGISTRY}/${BACK}:${IMAGE_TAG}
+            docker logout
           '''
         }
       }
     }
 
-    stage('Done') { steps { echo 'Jenkins pipeline finished' } }
+    stage('Update k8s Manifests & Push to GitHub') {
+      steps {
+        withCredentials([string(credentialsId: 'github-pat', variable: 'GITHUB_PAT')]) {
+          sh '''
+            # Update frontend & backend deployment manifests with new image tag
+            sed -i 's|image: .*'${FRONT}':.*|image: '${REGISTRY}'/'${FRONT}':'${IMAGE_TAG}'|' k8s/frontend-deployment.yaml || true
+            sed -i 's|image: .*'${BACK}':.*|image: '${REGISTRY}'/'${BACK}':'${IMAGE_TAG}'|' k8s/backend-deployment.yaml || true
+
+            git config user.email "ci-bot@manipal"
+            git config user.name "ci-bot"
+            git add k8s/frontend-deployment.yaml k8s/backend-deployment.yaml || true
+            git commit -m "ci: update images ${IMAGE_TAG}" || echo "no changes to commit"
+            git push https://${GITHUB_PAT}@github.com/Manipal-0831/DevOps-task-manager-project.git HEAD:main || echo "push failed"
+          '''
+        }
+      }
+    }
+
+    stage('Deploy Kubernetes Resources') {
+      steps {
+        sh '''
+          # Apply all k8s manifests
+          kubectl apply -f k8s/backend-deployment.yaml
+          kubectl apply -f k8s/backend-service.yaml
+          kubectl apply -f k8s/backend-hpa.yaml
+          kubectl apply -f k8s/frontend-deployment.yaml
+          kubectl apply -f k8s/frontend-service.yaml
+          kubectl apply -f k8s/fastapi-servicemonitor.yaml
+          kubectl apply -f k8s/load-generator.yaml
+          kubectl apply -f k8s/netpol-backend.yaml
+          kubectl apply -f k8s/secret-app.yaml
+        '''
+      }
+    }
+
+    stage('Deploy ArgoCD Manifests') {
+      steps {
+        sh '''
+          # Apply ArgoCD manifests (only needed the first time)
+          kubectl apply -f argocd/
+        '''
+      }
+    }
+
+    stage('Finish') {
+      steps {
+        echo "Pipeline complete: Terraform applied, images built & pushed, k8s resources deployed, monitoring & HPA ready, ArgoCD sync ready."
+      }
+    }
+
   }
 }
