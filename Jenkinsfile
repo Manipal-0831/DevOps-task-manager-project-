@@ -25,9 +25,7 @@ pipeline {
         sh 'node --version'
        }
       }
-     }
-
-
+     
     stage('Checkout') {
       steps {
         checkout scm
@@ -116,5 +114,5 @@ pipeline {
         echo "Pipeline complete: Terraform applied, images built & pushed, k8s resources deployed, monitoring & HPA ready, ArgoCD sync ready."
       }
     }
-
-  }
+ }
+)
