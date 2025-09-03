@@ -11,8 +11,11 @@ RUN apt-get update && apt-get install -y \
 RUN curl -fsSL https://get.docker.com | sh
 
 # Install kubectl
-RUN curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
-    && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+RUN set -eux; \
+    KUBECTL_VERSION="$(curl -s https://dl.k8s.io/release/stable.txt)"; \
+    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"; \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl; \
+    rm kubectl
 
 # Install Helm
 RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -33,7 +36,7 @@ RUN pip install bandit
 
 # Install Node.js & npm
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
+     && apt-get install -y nodejs 
 
 # Cleanup
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
