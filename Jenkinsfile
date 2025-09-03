@@ -1,5 +1,10 @@
 pipeline {
-  agent any
+   agent {
+    docker {
+      image 'mani0831/jenkins-agent:latest'
+      args '-u root:root'   // allows root installs if needed
+    }
+  }
 
   environment {
     REGISTRY = "mani0831"
@@ -8,6 +13,20 @@ pipeline {
   }
 
   stages {
+
+    stage('Check Tools') {
+      steps {
+        sh 'docker --version'
+        sh 'kubectl version --client=true'
+        sh 'helm version'
+        sh 'terraform version'
+        sh 'trivy --version'
+        sh 'bandit --version'
+        sh 'node --version'
+       }
+      }
+     }
+
 
     stage('Checkout') {
       steps {
