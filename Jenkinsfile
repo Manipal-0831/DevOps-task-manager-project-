@@ -2,7 +2,7 @@ pipeline {
    agent {
     docker {
       image 'mani0831/jenkins-agent:latest'
-      args '-u root:root'   // allows root installs if needed
+      args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
 
