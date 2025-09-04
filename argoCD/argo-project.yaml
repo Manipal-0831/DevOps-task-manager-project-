@@ -10,3 +10,5 @@ spec:
   destinations:
     - namespace: default
       server: 'https://kubernetes.default.svc'
+    - namespace: monitoring # Add this line #added sync
+      server: 'https://kubernetes.default.svc' #added sync
