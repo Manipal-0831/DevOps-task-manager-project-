@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: mani0831/myapp-backend:1.0.0
+        image: mani0831/myapp-frontend:1.0.0
         imagePullPolicy: IfNotPresent
         env:
         - name: VITE_API_URL
