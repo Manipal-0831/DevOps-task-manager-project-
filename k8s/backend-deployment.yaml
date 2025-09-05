@@ -16,7 +16,7 @@ spec:
       serviceAccountName: backend-sa
       containers:
       - name: backend
-        image: mani0831/myapp-backend:1.0.3
+        image: mani0831/myapp-backend:1.0.4
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
